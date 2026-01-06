@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PR Analysis Results - ROCm Sentinel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #00d4ff;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .pr-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .pr-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .github-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .github-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.5);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 10px;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        /* Quality Score */
+        .quality-hero {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 30px;
+            align-items: center;
+            padding: 30px;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            font-weight: 700;
+            background: white;
+            color: #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .score-grade {
+            font-size: 0.5em;
+            margin-top: -10px;
+        }
+
+        .score-details h2 {
+            color: white;
+            font-size: 2em;
+            margin-bottom: 15px;
+            border: none;
+            padding: 0;
+        }
+
+        .score-details p {
+            font-size: 1.1em;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        .grade-A { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .grade-B { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .grade-C { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .grade-D { background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%); }
+
+        /* Improvements Section */
+        .improvements-section {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .improvements-section h2 {
+            color: white;
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .improvement-item {
+            background: white;
+            color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .improvement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .improvement-title {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #ff6b6b;
+        }
+
+        .improvement-priority {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-critical { background: #ff4444; color: white; }
+        .priority-high { background: #ff8800; color: white; }
+        .priority-medium { background: #ffbb33; color: white; }
+        .priority-low { background: #00C851; color: white; }
+
+        .improvement-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .improvement-action {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .improvement-action strong {
+            color: #00d4ff;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        /* Review Comments */
+        .comment-item {
+            background: white;
+            border-left: 4px solid #00d4ff;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .comment-severity {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .severity-critical { background: #ff4444; color: white; }
+        .severity-high { background: #ff8800; color: white; }
+        .severity-medium { background: #ffbb33; color: white; }
+        .severity-low { background: #00C851; color: white; }
+        .severity-info { background: #33b5e5; color: white; }
+
+        .comment-title {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .comment-message {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .comment-files {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        /* Test Suggestions */
+        .test-list {
+            list-style: none;
+            counter-reset: test-counter;
+        }
+
+        .test-list li {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #00d4ff;
+            counter-increment: test-counter;
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .test-list li:before {
+            content: counter(test-counter);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #00d4ff;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9em;
+        }
+
+        /* Reviewer Cards */
+        .reviewer-card {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reviewer-info {
+            flex: 1;
+        }
+
+        .reviewer-name {
+            font-weight: 700;
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .reviewer-expertise {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .reviewer-reason {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .reviewer-score {
+            background: #00d4ff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        /* Action Items */
+        .action-items {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        .action-items h2 {
+            color: white;
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .action-item {
+            background: white;
+            color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: start;
+            gap: 15px;
+        }
+
+        .action-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #667eea;
+            border-radius: 6px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .action-text {
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+            .back-link {
+                display: none;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .quality-hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            
+            .score-circle {
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-content">
+        <div class="loading">
+            <div class="spinner"></div>
+            <h2>Loading Analysis Results...</h2>
+            <p>Please wait while we retrieve your PR analysis</p>
+        </div>
+    </div>
+
+    <script>
+        // Get PR number from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const prNumber = urlParams.get('pr');
+        const API_BASE = 'http://localhost:8000';
+
+        if (!prNumber) {
+            document.getElementById('main-content').innerHTML = `
+                <div class="card">
+                    <h2>❌ Error</h2>
+                    <p>No PR number specified. Please access this page from the PR dashboard.</p>
+                    <a href="prs.html" class="back-link">← Back to PR Dashboard</a>
+                </div>
+            `;
+        } else {
+            loadAnalysisResults(prNumber);
+        }
+
+        async function loadAnalysisResults(prNumber) {
+            try {
+                // Check if we have cached results
+                const cachedResults = sessionStorage.getItem(`pr_analysis_${prNumber}`);
+                
+                if (cachedResults) {
+                    displayResults(JSON.parse(cachedResults));
+                } else {
+                    // Fetch fresh analysis
+                    const response = await fetch(`${API_BASE}/api/prs/${prNumber}/analyze`, {
+                        method: 'POST'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // Cache for this session
+                    sessionStorage.setItem(`pr_analysis_${prNumber}`, JSON.stringify(data));
+                    
+                    displayResults(data);
+                }
+            } catch (error) {
+                console.error('Error loading analysis:', error);
+                document.getElementById('main-content').innerHTML = `
+                    <div class="card">
+                        <h2>❌ Error Loading Analysis</h2>
+                        <p>${error.message}</p>
+                        <p>Please try again or go back to the dashboard.</p>
+                        <a href="prs.html" class="back-link">← Back to PR Dashboard</a>
+                    </div>
+                `;
+            }
+        }
+
+        function displayResults(data) {
+            const pr = data.pr;
+            const analysis = data.analysis;
+            const quality = analysis.quality_score;
+            const review = data.review_suggestion;
+
+            // Generate improvements list
+            const improvements = generateImprovements(analysis, review);
+
+            const html = `
+                <a href="prs.html" class="back-link">← Back to PR Dashboard</a>
+
+                <!-- Header -->
+                <div class="header">
+                    <h1>PR #${pr.number}: ${pr.title}</h1>
+                    <div class="pr-meta">
+                        <span>👤 <strong>${pr.author}</strong></span>
+                        <span>📅 ${new Date(pr.created_at).toLocaleDateString()}</span>
+                        <span>🔄 ${pr.state}</span>
+                        <span>📁 ${pr.changed_files} files</span>
+                        <span style="color: green;">+${pr.additions}</span>
+                        <span style="color: red;">-${pr.deletions}</span>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <a href="${pr.url}" target="_blank" rel="noopener noreferrer" class="github-link">
+                            🔗 View on GitHub →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Quality Score Hero -->
+                <div class="quality-hero grade-${quality.grade}">
+                    <div class="score-circle">
+                        <div>${quality.score}</div>
+                        <div class="score-grade">Grade ${quality.grade}</div>
+                    </div>
+                    <div class="score-details">
+                        <h2>Overall Quality Assessment</h2>
+                        <p>${quality.recommendation}</p>
+                        ${review ? `<p style="margin-top: 10px; font-size: 1em;">${review.overall_assessment}</p>` : ''}
+                    </div>
+                </div>
+
+                <!-- Required Improvements -->
+                ${improvements.length > 0 ? `
+                    <div class="improvements-section">
+                        <h2>🔧 Required Improvements (${improvements.length})</h2>
+                        <p style="margin-bottom: 20px; opacity: 0.95;">
+                            Address these issues before merging to ensure code quality and maintainability:
+                        </p>
+                        ${improvements.map(imp => `
+                            <div class="improvement-item">
+                                <div class="improvement-header">
+                                    <div class="improvement-title">${imp.title}</div>
+                                    <span class="improvement-priority priority-${imp.priority}">${imp.priority}</span>
+                                </div>
+                                <div class="improvement-description">${imp.description}</div>
+                                ${imp.action ? `
+                                    <div class="improvement-action">
+                                        <strong>📝 Action Required:</strong>
+                                        ${imp.action}
+                                    </div>
+                                ` : ''}
+                                ${imp.files && imp.files.length > 0 ? `
+                                    <div class="comment-files">
+                                        <strong>Affected files:</strong> ${imp.files.join(', ')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="card" style="background: #d4edda; border-left: 4px solid #28a745;">
+                        <h2 style="color: #28a745;">✅ No Critical Improvements Required</h2>
+                        <p style="color: #155724;">This PR meets the quality standards! Review the suggestions below for potential enhancements.</p>
+                    </div>
+                `}
+
+                <!-- Stats -->
+                <div class="card">
+                    <h2>📊 Code Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value">${analysis.total_files}</div>
+                            <div class="stat-label">Total Files</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${analysis.code_files_count}</div>
+                            <div class="stat-label">Code Files</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${analysis.test_files_count}</div>
+                            <div class="stat-label">Test Files</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">+${analysis.new_code_lines}</div>
+                            <div class="stat-label">New Code Lines</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">+${analysis.new_test_lines}</div>
+                            <div class="stat-label">New Test Lines</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${(analysis.test_coverage_ratio * 100).toFixed(0)}%</div>
+                            <div class="stat-label">Test Coverage Ratio</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review Comments -->
+                ${analysis.review_comments.length > 0 ? `
+                    <div class="card">
+                        <h2>💬 Detailed Review Comments (${analysis.review_comments.length})</h2>
+                        ${analysis.review_comments.map(comment => `
+                            <div class="comment-item">
+                                <span class="comment-severity severity-${comment.severity}">${comment.severity}</span>
+                                <div class="comment-title">${comment.title}</div>
+                                <div class="comment-message">${comment.message}</div>
+                                ${comment.files.length > 0 ? `
+                                    <div class="comment-files">
+                                        <strong>Files:</strong> ${comment.files.join(', ')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Test Suggestions -->
+                ${analysis.test_suggestions.length > 0 ? `
+                    <div class="card">
+                        <h2>🧪 Suggested Test Cases (${analysis.test_suggestions.length})</h2>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            Add these test cases to ensure comprehensive coverage and catch potential issues:
+                        </p>
+                        <ul class="test-list">
+                            ${analysis.test_suggestions.map(suggestion => `
+                                <li>${suggestion}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                <!-- Suggested Reviewers -->
+                ${review && review.suggested_reviewers && review.suggested_reviewers.length > 0 ? `
+                    <div class="card">
+                        <h2>👥 Suggested Reviewers (${review.suggested_reviewers.length})</h2>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            Based on code ownership and expertise with the modified files:
+                        </p>
+                        ${review.suggested_reviewers.slice(0, 5).map(reviewer => `
+                            <div class="reviewer-card">
+                                <div class="reviewer-info">
+                                    <div class="reviewer-name">${reviewer.name}</div>
+                                    <div class="reviewer-expertise">
+                                        ${reviewer.commits} commits · ${reviewer.files_touched} files touched
+                                    </div>
+                                    <div class="reviewer-reason">${reviewer.reason}</div>
+                                </div>
+                                <div class="reviewer-score">${(reviewer.expertise_score * 100).toFixed(0)}%</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Action Items Checklist -->
+                <div class="action-items">
+                    <h2>✅ Action Items Checklist</h2>
+                    <p style="margin-bottom: 20px; opacity: 0.95;">
+                        Complete these items before requesting final review:
+                    </p>
+                    ${generateActionItems(analysis, review).map(action => `
+                        <div class="action-item">
+                            <div class="action-checkbox"></div>
+                            <div class="action-text">${action}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Risk Assessment -->
+                ${review ? `
+                    <div class="card">
+                        <h2>⚠️ Risk Assessment</h2>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 4em;">${getRiskEmoji(review.risk_level)}</div>
+                                <div style="font-size: 1.5em; font-weight: 700; text-transform: uppercase; color: ${getRiskColor(review.risk_level)};">
+                                    ${review.risk_level} Risk
+                                </div>
+                            </div>
+                            <div>
+                                <h3>Risk Factors:</h3>
+                                <ul style="margin-top: 10px;">
+                                    ${review.risk_factors.map(factor => `
+                                        <li style="margin-bottom: 8px; color: #666;">${factor}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+
+            document.getElementById('main-content').innerHTML = html;
+        }
+
+        function generateImprovements(analysis, review) {
+            const improvements = [];
+
+            // Missing tests
+            if (analysis.missing_tests) {
+                improvements.push({
+                    title: 'Missing Test Coverage',
+                    priority: 'critical',
+                    description: `This PR adds ${analysis.new_code_lines} lines of new code but only ${analysis.new_test_lines} lines of tests. Test coverage ratio is ${(analysis.test_coverage_ratio * 100).toFixed(0)}%, which is below the recommended 80%.`,
+                    action: `Add unit tests for the following files: ${analysis.untested_files.slice(0, 3).join(', ')}${analysis.untested_files.length > 3 ? ` and ${analysis.untested_files.length - 3} more` : ''}`,
+                    files: analysis.untested_files
+                });
+            }
+
+            // High-risk changes
+            if (analysis.high_risk_changes && analysis.high_risk_changes.length > 0) {
+                analysis.high_risk_changes.forEach(risk => {
+                    improvements.push({
+                        title: `High-Risk Code: ${risk.filename}`,
+                        priority: 'high',
+                        description: `This file contains ${risk.risk_types.join(', ')} code, which requires extra scrutiny and comprehensive testing.`,
+                        action: 'Ensure thorough testing including: GPU memory validation, multi-GPU scenarios, edge cases, and stress testing. Consider adding integration tests.',
+                        files: [risk.filename]
+                    });
+                });
+            }
+
+            // Flaky tests
+            if (analysis.flaky_test_changes && analysis.flaky_test_changes.length > 0) {
+                analysis.flaky_test_changes.forEach(flaky => {
+                    improvements.push({
+                        title: `Flaky Test Modification: ${flaky.filename}`,
+                        priority: 'high',
+                        description: `This file contains a known flaky test (${flaky.flaky_test_name}). Modifications to flaky tests can make debugging more difficult.`,
+                        action: 'Consider fixing the flakiness before making other changes. Add retries, increase timeouts, or fix race conditions.',
+                        files: [flaky.filename]
+                    });
+                });
+            }
+
+            // Test-only PR
+            if (analysis.is_test_only_pr) {
+                improvements.push({
+                    title: 'Test-Only Pull Request',
+                    priority: 'medium',
+                    description: 'This PR only modifies test files without any corresponding code changes.',
+                    action: 'Verify that this is intentional. If you\'re fixing a bug or adding a feature, make sure the code changes are included.'
+                });
+            }
+
+            // Risky files
+            if (analysis.risky_files && analysis.risky_files.length > 0) {
+                analysis.risky_files.forEach(risky => {
+                    improvements.push({
+                        title: `File with Failure History: ${risky.filename}`,
+                        priority: 'medium',
+                        description: `This file has failed ${risky.failure_count} times in recent CI runs.`,
+                        action: 'Review recent fixes and ensure your changes don\'t reintroduce issues. Extra testing recommended.',
+                        files: [risky.filename]
+                    });
+                });
+            }
+
+            // Blocking issues from review
+            if (review && review.blocking_issues) {
+                review.blocking_issues.forEach(issue => {
+                    improvements.push({
+                        title: 'Blocking Issue',
+                        priority: 'critical',
+                        description: issue,
+                        action: 'Address this issue before requesting approval.'
+                    });
+                });
+            }
+
+            return improvements;
+        }
+
+        function generateActionItems(analysis, review) {
+            const items = [];
+
+            if (analysis.missing_tests) {
+                items.push('Add unit tests for all new code (minimum 80% coverage)');
+                items.push(`Add tests for: ${analysis.untested_files.slice(0, 2).join(', ')}`);
+            }
+
+            if (analysis.test_suggestions && analysis.test_suggestions.length > 0) {
+                items.push('Implement suggested test cases (see Test Suggestions section)');
+            }
+
+            if (analysis.has_high_risk_changes) {
+                items.push('Run comprehensive testing on high-risk changes (GPU, multi-GPU, stress tests)');
+                items.push('Get approval from subject matter expert');
+            }
+
+            if (analysis.has_flaky_test_changes) {
+                items.push('Fix flaky tests or document why changes are necessary');
+            }
+
+            if (review && review.suggested_reviewers && review.suggested_reviewers.length > 0) {
+                items.push(`Request review from: ${review.suggested_reviewers.slice(0, 2).map(r => r.name).join(', ')}`);
+            }
+
+            items.push('Update PR description with testing details');
+            items.push('Ensure CI passes all checks');
+            items.push('Address all review comments');
+
+            return items;
+        }
+
+        function getRiskEmoji(level) {
+            const emojis = {
+                'low': '✅',
+                'medium': '⚡',
+                'high': '⚠️',
+                'critical': '🚨'
+            };
+            return emojis[level] || '❓';
+        }
+
+        function getRiskColor(level) {
+            const colors = {
+                'low': '#28a745',
+                'medium': '#ffc107',
+                'high': '#ff8800',
+                'critical': '#ff4444'
+            };
+            return colors[level] || '#666';
+        }
+    </script>
+</body>
+</html>
+

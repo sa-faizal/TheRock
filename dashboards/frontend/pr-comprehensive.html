@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive PR Analysis - ROCm Sentinel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #00d4ff;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-success { background: #28a745; color: white; }
+        .status-failure { background: #dc3545; color: white; }
+        .status-pending { background: #ffc107; color: #000; }
+        .status-partial { background: #fd7e14; color: white; }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 10px;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        /* Metrics */
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .metric-value {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        /* Job List */
+        .job-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+            background: #f8f9fa;
+        }
+
+        .job-item.success { border-left-color: #28a745; }
+        .job-item.failure { border-left-color: #dc3545; }
+        .job-item.pending { border-left-color: #ffc107; }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .job-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .job-status {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .job-details {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .error-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 0.85em;
+        }
+
+        .error-title {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+
+        .error-message {
+            color: #666;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        /* Issue Links */
+        .issue-link {
+            display: inline-block;
+            padding: 5px 12px;
+            margin: 5px;
+            background: #e7f5ff;
+            border: 1px solid #00d4ff;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #0066cc;
+            font-size: 0.9em;
+        }
+
+        .issue-link:hover {
+            background: #00d4ff;
+            color: white;
+        }
+
+        /* Risk Badge */
+        .risk-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            margin: 3px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .risk-critical { background: #dc3545; color: white; }
+        .risk-high { background: #fd7e14; color: white; }
+        .risk-medium { background: #ffc107; color: #000; }
+        .risk-low { background: #28a745; color: white; }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 24px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: width 0.3s;
+        }
+
+        .progress-success { background: #28a745; }
+        .progress-warning { background: #ffc107; }
+        .progress-danger { background: #dc3545; }
+
+        /* File List */
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px;
+            background: #f8f9fa;
+        }
+
+        .file-item {
+            padding: 6px 10px;
+            margin: 4px 0;
+            background: white;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Flaky Test */
+        .flaky-test {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+        }
+
+        .flaky-test-name {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+
+        .flaky-test-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #00d4ff;
+        }
+
+        .tab.active {
+            color: #00d4ff;
+            border-bottom-color: #00d4ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Links */
+        .link-button {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            margin-top: 8px;
+        }
+
+        .link-button:hover {
+            background: #0056b3;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="prs.html" class="back-link">← Back to PRs</a>
+            <h1 id="pr-title">Loading PR Analysis...</h1>
+            <div id="pr-meta"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing PR... This may take a moment.</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- CI Status Overview -->
+            <div class="card">
+                <h2>🔍 CI/CD Status Overview</h2>
+                <div id="ci-overview"></div>
+            </div>
+
+            <!-- Tabs for detailed sections -->
+            <div class="card">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('ci-details')">CI Details</button>
+                    <button class="tab" onclick="switchTab('failing-jobs')">Failing Jobs</button>
+                    <button class="tab" onclick="switchTab('flaky-tests')">Flaky Tests</button>
+                    <button class="tab" onclick="switchTab('code-quality')">Code Quality</button>
+                    <button class="tab" onclick="switchTab('timeline')">Timeline</button>
+                </div>
+
+                <div id="ci-details" class="tab-content active">
+                    <!-- CI job breakdown -->
+                </div>
+
+                <div id="failing-jobs" class="tab-content">
+                    <!-- Failing job details -->
+                </div>
+
+                <div id="flaky-tests" class="tab-content">
+                    <!-- Flaky test details -->
+                </div>
+
+                <div id="code-quality" class="tab-content">
+                    <!-- Code quality and risks -->
+                </div>
+
+                <div id="timeline" class="tab-content">
+                    <!-- PR timeline and metrics -->
+                </div>
+            </div>
+
+            <!-- Grid for additional info -->
+            <div class="grid">
+                <div class="card">
+                    <h2>📋 Linked Issues</h2>
+                    <div id="linked-issues"></div>
+                </div>
+
+                <div class="card">
+                    <h2>📊 Review Status</h2>
+                    <div id="review-status"></div>
+                </div>
+
+                <div class="card">
+                    <h2>📁 Key Files Modified</h2>
+                    <div id="key-files"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentData = null;
+
+        // Get PR number from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const prNumber = urlParams.get('pr');
+
+        if (!prNumber) {
+            document.getElementById('loading').innerHTML = '<p style="color: #dc3545;">❌ No PR number provided</p>';
+        } else {
+            loadPRAnalysis(prNumber);
+        }
+
+        async function loadPRAnalysis(prNumber) {
+            try {
+                const response = await fetch(`${API_BASE}/api/prs/${prNumber}/comprehensive`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                currentData = await response.json();
+                displayPRAnalysis(currentData);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading PR analysis:', error);
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: #dc3545;">❌ Error: ${error.message}</p>
+                    <p style="color: white; margin-top: 10px;">
+                        <a href="prs.html" style="color: #00d4ff;">← Back to PRs</a>
+                    </p>
+                `;
+            }
+        }
+
+        function displayPRAnalysis(data) {
+            // Header
+            document.getElementById('pr-title').textContent = `PR #${data.pr_number}: ${data.pr_title}`;
+            document.getElementById('pr-meta').innerHTML = `
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin-top: 15px;">
+                    <span><strong>Author:</strong> ${data.pr_author}</span>
+                    <span><strong>State:</strong> ${data.pr_state}</span>
+                    <a href="${data.pr_url}" target="_blank" class="link-button">View on GitHub</a>
+                </div>
+            `;
+
+            // CI Overview
+            displayCIOverview(data.ci_state, data.ci_duration);
+
+            // CI Details Tab
+            displayCIDetails(data.job_analysis);
+
+            // Failing Jobs Tab
+            displayFailingJobs(data.failing_jobs);
+
+            // Flaky Tests Tab
+            displayFlakyTests(data.flaky_tests);
+
+            // Code Quality Tab
+            displayCodeQuality(data.code_quality_risks);
+
+            // Timeline Tab
+            displayTimeline(data.time_metrics);
+
+            // Linked Issues
+            displayLinkedIssues(data.linked_issues);
+
+            // Review Status
+            displayReviewStatus(data.review_status);
+
+            // Key Files
+            displayKeyFiles(data.key_files);
+        }
+
+        function displayCIOverview(ciState, ciDuration) {
+            const statusClass = ciState.overall_status === 'success' ? 'success' :
+                              ciState.overall_status === 'failure' ? 'failure' :
+                              ciState.overall_status === 'pending' ? 'pending' : 'partial';
+
+            const progressClass = ciState.pass_rate >= 90 ? 'progress-success' :
+                                ciState.pass_rate >= 70 ? 'progress-warning' : 'progress-danger';
+
+            document.getElementById('ci-overview').innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Overall Status</span>
+                    <span class="status-badge status-${statusClass}">${ciState.overall_status.toUpperCase()}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Pass Rate</span>
+                    <span class="metric-value">${ciState.pass_rate}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill ${progressClass}" style="width: ${ciState.pass_rate}%">
+                        ${ciState.passed}/${ciState.total_checks} passed
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px;">
+                    <div class="metric">
+                        <span class="metric-label">✓ Passed</span>
+                        <span class="metric-value" style="color: #28a745;">${ciState.passed}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">✗ Failed</span>
+                        <span class="metric-value" style="color: #dc3545;">${ciState.failed}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">⏳ Pending</span>
+                        <span class="metric-value" style="color: #ffc107;">${ciState.pending}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">⊘ Skipped</span>
+                        <span class="metric-value" style="color: #6c757d;">${ciState.skipped}</span>
+                    </div>
+                </div>
+                ${ciDuration ? `
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                        <h3>⏱️ CI Duration</h3>
+                        <div class="metric">
+                            <span class="metric-label">Total Duration</span>
+                            <span class="metric-value">${ciDuration.total_duration_minutes} min</span>
+                        </div>
+                        ${ciDuration.longest_job ? `
+                            <div class="metric">
+                                <span class="metric-label">Longest Job</span>
+                                <span class="metric-value">${ciDuration.longest_job.name} (${ciDuration.longest_job.duration_minutes} min)</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function displayCIDetails(jobAnalysis) {
+            let html = '<h3>Test Results by Category</h3>';
+
+            const categories = [
+                { key: 'build', icon: '🔨', name: 'Build' },
+                { key: 'unit_tests', icon: '🧪', name: 'Unit Tests' },
+                { key: 'integration_tests', icon: '🔗', name: 'Integration Tests' },
+                { key: 'lint', icon: '📝', name: 'Lint/Format' },
+                { key: 'security', icon: '🔒', name: 'Security Scan' },
+                { key: 'coverage', icon: '📊', name: 'Code Coverage' }
+            ];
+
+            for (const category of categories) {
+                const data = jobAnalysis[category.key];
+                if (!data || data.total === 0) continue;
+
+                const statusClass = data.failed > 0 ? 'failure' : data.passed === data.total ? 'success' : 'pending';
+
+                html += `
+                    <div class="job-item ${statusClass}" style="margin: 15px 0;">
+                        <div class="job-header">
+                            <span class="job-name">${category.icon} ${category.name}</span>
+                            <span class="job-status status-${statusClass}">${data.passed}/${data.total} passed</span>
+                        </div>
+                        <div class="progress-bar" style="height: 8px; margin-top: 8px;">
+                            <div class="progress-fill progress-${statusClass}" style="width: ${data.pass_rate}%"></div>
+                        </div>
+                        ${data.jobs && data.jobs.length > 0 ? `
+                            <div style="margin-top: 10px; padding-left: 15px;">
+                                ${data.jobs.map(job => `
+                                    <div style="font-size: 0.85em; color: #666; margin: 3px 0;">
+                                        ${job.status === 'success' ? '✓' : job.status === 'failure' ? '✗' : '⏳'} 
+                                        ${job.name}
+                                        ${job.url ? `<a href="${job.url}" target="_blank" style="margin-left: 10px; color: #007bff;">View</a>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            document.getElementById('ci-details').innerHTML = html || '<div class="empty-state">No CI jobs found</div>';
+        }
+
+        function displayFailingJobs(failingJobs) {
+            if (!failingJobs || failingJobs.length === 0) {
+                document.getElementById('failing-jobs').innerHTML = '<div class="empty-state">🎉 No failing jobs!</div>';
+                return;
+            }
+
+            let html = '<h3>❌ Failing Job Details</h3>';
+
+            for (const job of failingJobs) {
+                html += `
+                    <div class="job-item failure" style="margin: 15px 0;">
+                        <div class="job-header">
+                            <span class="job-name">${job.name}</span>
+                            <span class="job-status" style="background: #dc3545; color: white;">${job.status}</span>
+                        </div>
+                        ${job.duration_seconds ? `
+                            <div class="job-details">Duration: ${Math.round(job.duration_seconds / 60)} minutes</div>
+                        ` : ''}
+                        ${job.root_cause_hint !== 'unknown' ? `
+                            <div class="risk-badge risk-high">Root Cause: ${job.root_cause_hint}</div>
+                        ` : ''}
+                        ${job.error_summary || job.first_error ? `
+                            <div class="error-box">
+                                ${job.error_summary ? `<div class="error-title">Error Summary:</div><div class="error-message">${job.error_summary}</div>` : ''}
+                                ${job.first_error ? `<div class="error-title" style="margin-top: 8px;">First Error:</div><div class="error-message">${job.first_error}</div>` : ''}
+                            </div>
+                        ` : ''}
+                        <a href="${job.logs_url || job.url}" target="_blank" class="link-button">View Full Logs</a>
+                    </div>
+                `;
+            }
+
+            document.getElementById('failing-jobs').innerHTML = html;
+        }
+
+        function displayFlakyTests(flakyTests) {
+            if (!flakyTests || flakyTests.length === 0) {
+                document.getElementById('flaky-tests').innerHTML = '<div class="empty-state">✅ No flaky tests detected</div>';
+                return;
+            }
+
+            let html = '<h3>⚠️ Flaky Test Detection</h3>';
+            html += '<p style="color: #666; margin-bottom: 15px;">Tests that have both passed and failed in recent runs:</p>';
+
+            for (const test of flakyTests) {
+                html += `
+                    <div class="flaky-test">
+                        <div class="flaky-test-name">${test.test_name}</div>
+                        <div class="flaky-test-stats">
+                            <span><strong>Total Runs:</strong> ${test.total_runs}</span>
+                            <span><strong>Failures:</strong> ${test.failures}</span>
+                            <span><strong>Success:</strong> ${test.success}</span>
+                            <span><strong>Failure Rate:</strong> ${test.failure_rate}%</span>
+                            <span class="risk-badge risk-${test.flaky_score > 0.5 ? 'high' : 'medium'}">
+                                Flaky Score: ${test.flaky_score}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('flaky-tests').innerHTML = html;
+        }
+
+        function displayCodeQuality(risks) {
+            let html = '<h3>🔍 Code Quality Analysis</h3>';
+            html += '<div class="metric"><span class="metric-label">Total Lines Changed</span><span class="metric-value">' + risks.total_lines_changed + '</span></div>';
+
+            // Risk categories
+            const riskCategories = [
+                { key: 'touches_critical_paths', label: 'Critical Paths', icon: '🚨', level: 'critical' },
+                { key: 'changes_infrastructure', label: 'Infrastructure Changes', icon: '⚙️', level: 'high' },
+                { key: 'modifies_secrets', label: 'Security/Secrets', icon: '🔐', level: 'critical' },
+                { key: 'changes_permissions', label: 'Permission Changes', icon: '🔑', level: 'high' },
+                { key: 'config_changes', label: 'Config Changes', icon: '📝', level: 'medium' },
+                { key: 'new_dependencies', label: 'New Dependencies', icon: '📦', level: 'medium' }
+            ];
+
+            for (const category of riskCategories) {
+                const items = risks[category.key];
+                if (items && items.length > 0) {
+                    html += `
+                        <div style="margin: 15px 0;">
+                            <div class="risk-badge risk-${category.level}">${category.icon} ${category.label} (${items.length})</div>
+                            <div class="file-list">
+                                ${items.map(item => `<div class="file-item">${item}</div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (risks.complexity_increase) {
+                html += '<div class="risk-badge risk-high" style="margin-top: 15px;">⚠️ Large Code Change (Complexity Increase)</div>';
+            }
+
+            document.getElementById('code-quality').innerHTML = html;
+        }
+
+        function displayTimeline(timeMetrics) {
+            if (!timeMetrics) {
+                document.getElementById('timeline').innerHTML = '<div class="empty-state">No timeline data available</div>';
+                return;
+            }
+
+            document.getElementById('timeline').innerHTML = `
+                <h3>📅 PR Timeline</h3>
+                <div class="metric">
+                    <span class="metric-label">Opened</span>
+                    <span class="metric-value">${new Date(timeMetrics.opened_at).toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Time Since Opened</span>
+                    <span class="metric-value">${timeMetrics.hours_since_opened} hours</span>
+                </div>
+                ${timeMetrics.last_commit_at ? `
+                    <div class="metric">
+                        <span class="metric-label">Last Commit</span>
+                        <span class="metric-value">${new Date(timeMetrics.last_commit_at).toLocaleString()}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Time Since Last Commit</span>
+                        <span class="metric-value">${timeMetrics.hours_since_last_commit} hours</span>
+                    </div>
+                ` : ''}
+                ${timeMetrics.last_review_at ? `
+                    <div class="metric">
+                        <span class="metric-label">Last Review</span>
+                        <span class="metric-value">${new Date(timeMetrics.last_review_at).toLocaleString()}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Time Since Last Review</span>
+                        <span class="metric-value">${timeMetrics.hours_since_last_review} hours</span>
+                    </div>
+                ` : ''}
+                <div class="metric">
+                    <span class="metric-label">Total Commits</span>
+                    <span class="metric-value">${timeMetrics.total_commits}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Total Reviews</span>
+                    <span class="metric-value">${timeMetrics.total_reviews}</span>
+                </div>
+            `;
+        }
+
+        function displayLinkedIssues(issues) {
+            if (!issues || issues.length === 0) {
+                document.getElementById('linked-issues').innerHTML = '<div class="empty-state">No linked issues</div>';
+                return;
+            }
+
+            let html = '';
+            for (const issue of issues) {
+                html += `<a href="${issue.url}" target="_blank" class="issue-link">#${issue.number}: ${issue.title}</a>`;
+            }
+
+            document.getElementById('linked-issues').innerHTML = html;
+        }
+
+        function displayReviewStatus(reviewStatus) {
+            document.getElementById('review-status').innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Total Reviews</span>
+                    <span class="metric-value">${reviewStatus.total_reviews}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">✓ Approved</span>
+                    <span class="metric-value" style="color: #28a745;">${reviewStatus.approved_count}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">⚠ Changes Requested</span>
+                    <span class="metric-value" style="color: #dc3545;">${reviewStatus.changes_requested_count}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">💬 Commented</span>
+                    <span class="metric-value">${reviewStatus.commented_count}</span>
+                </div>
+            `;
+        }
+
+        function displayKeyFiles(keyFiles) {
+            document.getElementById('key-files').innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Total Files</span>
+                    <span class="metric-value">${keyFiles.total_files}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Source Files</span>
+                    <span class="metric-value">${keyFiles.source_files.length}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Test Files</span>
+                    <span class="metric-value">${keyFiles.test_files.length}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Config Files</span>
+                    <span class="metric-value">${keyFiles.config_files.length}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Infrastructure Files</span>
+                    <span class="metric-value">${keyFiles.infrastructure.length}</span>
+                </div>
+            `;
+        }
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
+
+
+

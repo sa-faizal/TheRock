@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 40px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .info { color: #9cdcfe; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        pre {
+            background: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 TheRock Dashboard Connection Test</h1>
+    
+    <h2>Current Environment</h2>
+    <pre id="env"></pre>
+    
+    <h2>Backend Connection Tests</h2>
+    <button onclick="testBackend('http://localhost:8000/api/health')">Test: localhost:8000</button>
+    <button onclick="testBackend(window.location.protocol + '//' + window.location.hostname + ':8000/api/health')">Test: Current Host:8000</button>
+    <pre id="results"></pre>
+    
+    <h2>Instructions</h2>
+    <div class="info">
+        <p>✓ If "localhost:8000" works, open the dashboard at: <strong>http://localhost:3000</strong></p>
+        <p>✓ If "Current Host:8000" works, you're using port forwarding. Copy the working API URL.</p>
+        <p>✓ Then access: <strong>http://localhost:51148/?api=WORKING_API_URL</strong></p>
+    </div>
+
+    <script>
+        // Display environment info
+        document.getElementById('env').textContent = `
+Current URL: ${window.location.href}
+Protocol: ${window.location.protocol}
+Hostname: ${window.location.hostname}
+Port: ${window.location.port || '(default)'}
+`;
+
+        async function testBackend(url) {
+            const results = document.getElementById('results');
+            results.innerHTML = `<span class="info">Testing: ${url}...</span>\n`;
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                const duration = Date.now() - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    results.innerHTML = `<span class="success">✓ SUCCESS! Backend is reachable at: ${url}</span>
+
+Response Time: ${duration}ms
+Status: ${response.status} ${response.statusText}
+GitHub Token: ${data.services?.github ? '✓ Configured' : '✗ Missing'}
+Anthropic API: ${data.services?.anthropic ? '✓ Configured' : '✗ Missing'}
+
+<span class="success">Full Response:</span>
+${JSON.stringify(data, null, 2)}
+
+<span class="info">✓ Use this URL in your dashboard:
+${url.replace('/health', '')}</span>
+`;
+                } else {
+                    results.innerHTML += `<span class="error">✗ HTTP Error: ${response.status} ${response.statusText}</span>\n`;
+                }
+            } catch (error) {
+                results.innerHTML += `<span class="error">✗ FAILED: ${error.message}</span>
+
+<span class="info">This usually means:
+1. Backend is not running on this host/port
+2. CORS is blocking the request
+3. Network/firewall issue</span>
+`;
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testBackend('http://localhost:8000/api/health');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+
+
+

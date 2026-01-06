@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Chat - ROCm Sentinel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .nav {
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+
+        .nav a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 10px;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            padding: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.assistant {
+            align-items: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+        }
+
+        .message.assistant .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+
+        .message-meta {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #00d4ff;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        #chatInput:focus {
+            outline: none;
+            border-color: #0099cc;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.5);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .examples {
+            margin-top: 10px;
+        }
+
+        .example-query {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d4ff20 0%, #0099cc20 100%);
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            padding: 6px 12px;
+            border-radius: 15px;
+            margin: 5px 5px 5px 0;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .example-query:hover {
+            background: linear-gradient(135deg, #00d4ff40 0%, #0099cc40 100%);
+        }
+
+        .issue-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            color: #2e7d32;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .issue-link:hover {
+            background: #c8e6c9;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .spinner-small {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Dashboard</a>
+        </div>
+
+        <h1>🛡️ ROCm Sentinel - Issue Triaging Assistant</h1>
+
+        <div class="card">
+            <h2>Example Queries</h2>
+            <p style="margin-bottom: 10px; color: #666;">Click on any example to try it out:</p>
+            <div class="examples">
+                <span class="example-query" onclick="askQuestion('What is the status of issue #1?')">What is the status of issue #1?</span>
+                <span class="example-query" onclick="askQuestion('Is issue #2 being triaged?')">Is issue #2 being triaged?</span>
+                <span class="example-query" onclick="askQuestion('Did someone comment on issue #3?')">Did someone comment on issue #3?</span>
+                <span class="example-query" onclick="askQuestion('Who is assigned to issue #4?')">Who is assigned to issue #4?</span>
+                <span class="example-query" onclick="askQuestion('Are people looking at issue #5?')">Are people looking at issue #5?</span>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-header">
+                🤖 Chat with AI about Issues
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message assistant">
+                    <div class="message-bubble">
+                        👋 Hello! I'm your ROCm/TheRock issue assistant. Ask me about any issue's status, comments, assignees, or activity. 
+                        Just mention an issue number in your question!
+                    </div>
+                    <div class="message-meta">AI Assistant</div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <form class="chat-input-form" onsubmit="sendMessage(event)">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        placeholder="Ask about an issue... (e.g., 'What's the status of #123?')"
+                        autocomplete="off"
+                    >
+                    <button type="submit" id="sendButton">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dynamically determine API base URL
+        function getApiBase() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const apiParam = urlParams.get('api');
+            if (apiParam) {
+                return apiParam;
+            }
+            
+            const currentHost = window.location.hostname;
+            const currentProtocol = window.location.protocol;
+            
+            if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                return 'http://localhost:8000/api';
+            }
+            
+            return `${currentProtocol}//${currentHost}:8000/api`;
+        }
+        
+        const API_BASE = getApiBase();
+        console.log('Chat page - API_BASE:', API_BASE);
+
+        function addMessage(text, sender, metadata = {}) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            bubbleDiv.textContent = text;
+            
+            messageDiv.appendChild(bubbleDiv);
+            
+            // Add issue link if provided
+            if (metadata.issueUrl) {
+                const linkDiv = document.createElement('a');
+                linkDiv.className = 'issue-link';
+                linkDiv.href = metadata.issueUrl;
+                linkDiv.target = '_blank';
+                linkDiv.textContent = `View Issue #${metadata.issueNumber} on GitHub →`;
+                bubbleDiv.appendChild(document.createElement('br'));
+                bubbleDiv.appendChild(linkDiv);
+            }
+            
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'message-meta';
+            metaDiv.textContent = sender === 'user' ? 'You' : 'AI Assistant';
+            messageDiv.appendChild(metaDiv);
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addLoadingMessage() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.id = 'loadingMessage';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble loading';
+            bubbleDiv.innerHTML = '<div class="spinner-small"></div><span>Thinking...</span>';
+            
+            messageDiv.appendChild(bubbleDiv);
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeLoadingMessage() {
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) {
+                loadingMsg.remove();
+            }
+        }
+
+        async function sendMessage(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            const input = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendButton');
+            const query = input.value.trim();
+            
+            if (!query) {
+                return;
+            }
+            
+            // Add user message
+            addMessage(query, 'user');
+            
+            // Clear input and disable
+            input.value = '';
+            input.disabled = true;
+            sendButton.disabled = true;
+            
+            // Show loading
+            addLoadingMessage();
+            
+            try {
+                const response = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: query
+                    })
+                });
+                
+                const data = await response.json();
+                
+                removeLoadingMessage();
+                
+                if (data.success) {
+                    addMessage(data.response, 'assistant', {
+                        issueNumber: data.issue_number,
+                        issueUrl: data.issue_url
+                    });
+                } else {
+                    addMessage(data.response || 'Sorry, I couldn\'t process that query.', 'assistant');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                removeLoadingMessage();
+                addMessage('Sorry, there was an error processing your request. Please make sure the backend is running.', 'assistant');
+            } finally {
+                input.disabled = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        }
+
+        function askQuestion(question) {
+            document.getElementById('chatInput').value = question;
+            sendMessage();
+        }
+
+        // Focus input on load
+        window.onload = function() {
+            document.getElementById('chatInput').focus();
+        };
+    </script>
+</body>
+</html>
+

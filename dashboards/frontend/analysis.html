@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Analysis - ROCm Sentinel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .nav {
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+
+        .nav a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 10px;
+        }
+
+        .card h3 {
+            color: #ff6b35;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.5);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            border: 2px solid #00d4ff;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 150px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #00d4ff;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .issue-header {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .issue-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .issue-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .severity-tag {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1em;
+            margin: 10px 10px 10px 0;
+        }
+
+        .severity-critical { background: #ffebee; color: #c62828; }
+        .severity-high { background: #fff3e0; color: #e65100; }
+        .severity-medium { background: #fff9c4; color: #f57f17; }
+        .severity-low { background: #e8f5e9; color: #2e7d32; }
+
+        .component-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d4ff20 0%, #0099cc20 100%);
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            padding: 6px 14px;
+            border-radius: 15px;
+            margin: 5px 5px 5px 0;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .similar-issue {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .similar-issue a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .similar-issue a:hover {
+            text-decoration: underline;
+        }
+
+        .commit-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #ff6b35;
+        }
+
+        .commit-sha {
+            font-family: monospace;
+            background: #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .fix-suggestions {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .fix-suggestions ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .fix-suggestions li {
+            margin: 8px 0;
+            color: #2e7d32;
+        }
+
+        .comment-item {
+            background: #fff9c4;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #fbc02d;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #f57f17;
+        }
+
+        .comment-date {
+            font-size: 0.85em;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        .comment-body {
+            margin-top: 10px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .analysis-summary {
+            background: linear-gradient(135deg, #00d4ff10 0%, #0099cc10 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #00d4ff;
+            margin-bottom: 20px;
+        }
+
+        .label-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+        }
+
+        .info-box {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .info-box strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Dashboard</a>
+        </div>
+
+        <h1>🛡️ ROCm Sentinel - Issue Triaging & Analysis</h1>
+
+        <div class="card">
+            <h2>Analyze Issue</h2>
+            <div class="controls">
+                <input type="number" id="issueNumberInput" placeholder="Issue #" min="1">
+                <button onclick="analyzeIssue()">Analyze Issue</button>
+            </div>
+        </div>
+
+        <div id="analysisResult"></div>
+    </div>
+
+    <script>
+        // Dynamically determine API base URL
+        function getApiBase() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const apiParam = urlParams.get('api');
+            if (apiParam) {
+                return apiParam;
+            }
+            
+            const currentHost = window.location.hostname;
+            const currentProtocol = window.location.protocol;
+            
+            if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                return 'http://localhost:8000/api';
+            }
+            
+            return `${currentProtocol}//${currentHost}:8000/api`;
+        }
+        
+        const API_BASE = getApiBase();
+        console.log('Analysis page - API_BASE:', API_BASE);
+
+        // Check for issue number in URL parameters
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const issueNumber = urlParams.get('issue');
+            
+            if (issueNumber) {
+                document.getElementById('issueNumberInput').value = issueNumber;
+                analyzeIssue();
+            }
+        };
+
+        async function analyzeIssue() {
+            const issueNumber = document.getElementById('issueNumberInput').value;
+            const resultDiv = document.getElementById('analysisResult');
+
+            if (!issueNumber) {
+                resultDiv.innerHTML = '<div class="card error">Please enter an issue number</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="card"><div class="loading"><div class="spinner"></div>Analyzing issue #' + issueNumber + '... This may take a minute.</div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/analyze/issue/${issueNumber}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const analysis = data.analysis;
+                const comments = data.comments || [];
+
+                // Build the HTML
+                let html = `
+                    <div class="card">
+                        <div class="issue-header">
+                            <div class="issue-title">#${analysis.issue_number}: ${analysis.title}</div>
+                            <div class="issue-meta">
+                                <span>State: ${analysis.state}</span>
+                                <span>Created: ${new Date(analysis.created_at).toLocaleDateString()}</span>
+                                <span><a href="${analysis.url}" target="_blank" style="color: white;">View on GitHub →</a></span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="severity-tag severity-${analysis.severity}">
+                                Severity: ${analysis.severity.toUpperCase()}
+                            </span>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">AI Analysis Summary</div>
+                            <div class="analysis-summary">
+                                ${analysis.analysis_summary}
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">Affected ROCm Components</div>
+                            <div class="info-box">
+                                <p>This issue affects the following ROCm components based on TheRock monorepo structure:</p>
+                                <div class="label-list">
+                                    ${analysis.component_categories.map(c =>
+                                        `<span class="component-tag">${c.component} (${Math.round(c.confidence * 100)}% confidence)</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        ${analysis.fix_suggestions.length > 0 ? `
+                            <div class="section">
+                                <div class="section-title">💡 Suggested Fixes</div>
+                                <div class="fix-suggestions">
+                                    <ul>
+                                        ${analysis.fix_suggestions.map(s => `<li>${s}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${analysis.similar_issues.length > 0 ? `
+                            <div class="section">
+                                <div class="section-title">📌 Similar Historical Issues</div>
+                                ${analysis.similar_issues.slice(0, 5).map(sim => `
+                                    <div class="similar-issue">
+                                        <div>
+                                            <a href="${sim.url}" target="_blank">#${sim.number}: ${sim.title}</a>
+                                            <span style="color: #666; margin-left: 10px;">${Math.round(sim.similarity_score * 100)}% similar</span>
+                                        </div>
+                                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                                            State: ${sim.state}
+                                            ${sim.closed_at ? ' • Closed: ' + new Date(sim.closed_at).toLocaleDateString() : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${analysis.root_cause_commits.length > 0 ? `
+                            <div class="section">
+                                <div class="section-title">🔍 Potential Root Cause Commits</div>
+                                ${analysis.root_cause_commits.slice(0, 5).map(commit => `
+                                    <div class="commit-item">
+                                        <div>
+                                            <span class="commit-sha">${commit.sha.substring(0, 7)}</span>
+                                            <a href="${commit.url}" target="_blank" style="margin-left: 10px; color: #764ba2;">
+                                                ${commit.message.split('\\n')[0]}
+                                            </a>
+                                        </div>
+                                        <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                                            by ${commit.author} • ${new Date(commit.date).toLocaleDateString()} • 
+                                            Confidence: ${Math.round(commit.confidence_score * 100)}%
+                                        </div>
+                                        ${commit.files_changed.length > 0 ? `
+                                            <div style="margin-top: 8px; font-size: 0.85em; color: #999;">
+                                                Files: ${commit.files_changed.slice(0, 3).join(', ')}
+                                                ${commit.files_changed.length > 3 ? ` and ${commit.files_changed.length - 3} more...` : ''}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <div class="section">
+                            <div class="section-title">🏷️ Suggested Labels</div>
+                            <div class="label-list">
+                                ${analysis.suggested_labels.map(l => `<span class="component-tag">${l}</span>`).join('')}
+                            </div>
+                        </div>
+
+                        ${comments.length > 0 ? `
+                            <div class="section">
+                                <div class="section-title">💬 Comments (${comments.length})</div>
+                                ${comments.slice(-5).reverse().map(comment => `
+                                    <div class="comment-item">
+                                        <div>
+                                            <span class="comment-author">${comment.author}</span>
+                                            <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span>
+                                        </div>
+                                        <div class="comment-body">${comment.body.substring(0, 500)}${comment.body.length > 500 ? '...' : ''}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="info-box">No comments yet on this issue.</div>'}
+
+                        ${data.assignees && data.assignees.length > 0 ? `
+                            <div class="section">
+                                <div class="section-title">👥 Assignees</div>
+                                <div class="info-box">
+                                    ${data.assignees.join(', ')}
+                                </div>
+                            </div>
+                        ` : '<div class="info-box">No assignees yet.</div>'}
+                    </div>
+                `;
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="card error">
+                        <h3>Error Analyzing Issue</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Issue #:</strong> ${issueNumber}</p>
+                        <p>Please make sure the backend is running and the issue number is valid.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
+
