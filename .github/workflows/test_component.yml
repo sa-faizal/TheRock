@@ -117,10 +117,10 @@ jobs:
         run: |
           ${{ fromJSON(inputs.component).test_script }}
 
-      - name: Report memory usage
+      - name: Report resource usage
         if: always()
         run: |
-          echo "=== cgroup memory ==="
+          echo "=== cgroup memory (RAM) ==="
           if [ -f /sys/fs/cgroup/memory.current ]; then
             echo "cgroup v2 detected"
             awk '{printf "Current: %.1f Gi\n", $1/1073741824}' /sys/fs/cgroup/memory.current
@@ -136,6 +136,15 @@ jobs:
           else
             echo "No cgroup memory info found"
           fi
+
+          echo ""
+          echo "=== ephemeral storage (disk) ==="
+          df -h / 2>/dev/null || true
+          echo ""
+          echo "--- workspace usage ---"
+          du -sh ${{ github.workspace }} 2>/dev/null || true
+          echo "--- /tmp usage ---"
+          du -sh /tmp 2>/dev/null || true
 
       # GitHub's 'Complete job' step is unaware of launched executables
       # and will fail to clean up orphan processes.
