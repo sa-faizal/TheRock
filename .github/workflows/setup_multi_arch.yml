@@ -68,6 +68,10 @@ on:
         description: "Build JAX wheels."
         type: boolean
         default: false
+      run_asan_tests:
+        description: Allow sanitizer tests on non-nightly triggers.
+        type: boolean
+        default: false
       python_version:
         description: "Single Python version for wheel builds; empty uses the default matrix."
         type: string
@@ -169,6 +173,7 @@ jobs:
           RELEASE_TYPE: ${{ inputs.release_type }}
           BUILD_PYTORCH: ${{ inputs.build_pytorch }}
           BUILD_JAX: ${{ inputs.build_jax }}
+          RUN_ASAN_TESTS: ${{ inputs.run_asan_tests }}
           PYTHON_VERSION: ${{ inputs.python_version }}
           LINUX_AMDGPU_FAMILIES: ${{ inputs.linux_amdgpu_families }}
           WINDOWS_AMDGPU_FAMILIES: ${{ inputs.windows_amdgpu_families }}

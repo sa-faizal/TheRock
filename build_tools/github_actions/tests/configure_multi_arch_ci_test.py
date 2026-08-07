@@ -136,6 +136,7 @@ class TestCIInputs(unittest.TestCase):
         self.assertEqual(inputs.pr_labels, [])
         self.assertEqual(inputs.linux_amdgpu_families, [])
         self.assertEqual(inputs.prebuilt_stages, "")
+        self.assertFalse(inputs.run_asan_tests)
 
 
 class TestCIInputsFromEnviron(unittest.TestCase):
@@ -164,6 +165,7 @@ class TestCIInputsFromEnviron(unittest.TestCase):
                 "BASELINE_RUN_ID": "12345",
                 "BUILD_PYTORCH": "false",
                 "BUILD_JAX": "true",
+                "RUN_ASAN_TESTS": "true",
                 "PYTHON_VERSION": "3.12",
             },
         )
@@ -173,6 +175,7 @@ class TestCIInputsFromEnviron(unittest.TestCase):
         self.assertEqual(inputs.baseline_run_id, "12345")
         self.assertFalse(inputs.build_pytorch)
         self.assertTrue(inputs.build_jax)
+        self.assertTrue(inputs.run_asan_tests)
         self.assertEqual(inputs.python_versions, ["3.12"])
 
     def test_pull_request_extracts_labels(self):
@@ -572,6 +575,18 @@ class TestDecideJobs(unittest.TestCase):
                 cm.JobAction.SKIP,
                 f"ASAN tests should skip on {event}",
             )
+
+        # A caller can explicitly enable sanitizer tests for presubmit.
+        result = cm.decide_jobs(
+            self._inputs(
+                event_name="pull_request",
+                build_variant="asan",
+                run_asan_tests=True,
+            ),
+            git_context=git_context,
+            targets=cm.TargetSelection(),
+        )
+        self.assertEqual(result.test_rocm.action, cm.JobAction.RUN)
 
         # Schedule and workflow_dispatch should run ASAN tests
         for event in ["schedule", "workflow_dispatch"]:
@@ -1381,6 +1396,34 @@ class TestExpandBuildConfigs(unittest.TestCase):
         entry = result.linux.per_family_info[0]
         self.assertEqual(entry["test-runs-on"], "")
 
+        # Explicit presubmit opt-in: use the sanitizer sandbox runner.
+        result = cm.expand_build_configs(
+            ci_inputs=self._inputs(
+                event_name="pull_request",
+                build_variant="asan",
+                run_asan_tests=True,
+            ),
+            git_context=cm.GitContext(),
+            targets=targets,
+            jobs=_jobs(),
+        )
+        entry = result.linux.per_family_info[0]
+        self.assertIn("sandbox", entry["test-runs-on"])
+
+        # Explicit host-ASAN presubmit opt-in uses the same sandbox runner.
+        result = cm.expand_build_configs(
+            ci_inputs=self._inputs(
+                event_name="pull_request",
+                build_variant="host-asan",
+                run_asan_tests=True,
+            ),
+            git_context=cm.GitContext(),
+            targets=targets,
+            jobs=_jobs(),
+        )
+        entry = result.linux.per_family_info[0]
+        self.assertIn("sandbox", entry["test-runs-on"])
+
 
 # ---------------------------------------------------------------------------
 # Step 6: Format Outputs
@@ -1654,6 +1697,40 @@ class TestBuildConfigWorkflowContract(unittest.TestCase):
             f"  In YAML but not Python: {yaml_fields - python_fields}\n"
             f"  In Python but not YAML: {python_fields - yaml_fields - unused_fields}",
         )
+
+    def test_sanitizer_presubmit_inputs_are_forwarded(self):
+        setup_text = (WORKFLOWS_DIR / "setup_multi_arch.yml").read_text()
+        linux_ci_text = (WORKFLOWS_DIR / "multi_arch_ci_linux.yml").read_text()
+        linux_build_text = (
+            WORKFLOWS_DIR / "multi_arch_build_portable_linux.yml"
+        ).read_text()
+        test_artifacts_text = (WORKFLOWS_DIR / "test_artifacts.yml").read_text()
+
+        self.assertIn("RUN_ASAN_TESTS: ${{ inputs.run_asan_tests }}", setup_text)
+        self.assertIn("build_stages: ${{ inputs.build_stages }}", linux_ci_text)
+        self.assertIn(
+            "run_sanity_check: ${{ inputs.run_sanity_check }}", linux_ci_text
+        )
+        self.assertIn(
+            "github.event_name == 'workflow_dispatch' || inputs.run_sanity_check",
+            test_artifacts_text,
+        )
+        self.assertIn("always() &&", test_artifacts_text)
+
+        for stage in (
+            "compiler-runtime",
+            "runtime-tests",
+            "wsl-rocdxg",
+            "math-libs",
+            "comm-libs",
+            "storage-libs",
+            "debug-tools",
+            "dctools-core",
+            "profiler-apps",
+            "cv-libs",
+            "media-libs",
+        ):
+            self.assertIn(f"',{stage},'", linux_build_text)
 
 
 class TestFamilyTestFilters(unittest.TestCase):

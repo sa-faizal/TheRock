@@ -144,6 +144,7 @@ class CIInputs:
     release_type: str = "ci"  # "ci", or "dev", "nightly", "prerelease" for releases
     build_pytorch: bool = True
     build_jax: bool = False
+    run_asan_tests: bool = False
     python_versions: list[str] = field(default_factory=list)
 
     # PR labels (from event payload for pull_request events)
@@ -183,6 +184,10 @@ class CIInputs:
     def is_workflow_dispatch(self) -> bool:
         return self.event_name == "workflow_dispatch"
 
+    @property
+    def should_run_asan_tests(self) -> bool:
+        return self.is_schedule or self.is_workflow_dispatch or self.run_asan_tests
+
     @staticmethod
     def from_environ() -> "CIInputs":
         """Parse from GitHub Actions environment."""
@@ -201,6 +206,8 @@ class CIInputs:
         build_pytorch = os.environ.get("BUILD_PYTORCH", "true").lower() != "false"
         build_jax = os.environ.get("BUILD_JAX", "false").lower() != "false"
         python_version = os.environ.get("PYTHON_VERSION", "").strip()
+
+        run_asan_tests = os.environ.get("RUN_ASAN_TESTS", "false").lower() == "true"
 
         pr_labels: list[str] = []
         base_ref: str | None = "HEAD^1"
@@ -247,6 +254,7 @@ class CIInputs:
             release_type=release_type,
             build_pytorch=build_pytorch,
             build_jax=build_jax,
+            run_asan_tests=run_asan_tests,
             python_versions=[python_version] if python_version else [],
             pr_labels=pr_labels,
             linux_amdgpu_families=_parse_comma_list(
@@ -924,12 +932,12 @@ def decide_jobs(
     # TODO(#3433): Plumb test_rocm.action through workflow outputs. Until then,
     # the skip is enforced in _expand_build_config_for_platform() via test_runs_on.
     if ci_inputs.build_variant == "asan":
-        # Only run ASAN tests on scheduled or workflow_dispatch runs, to avoid impact on submodule bumps
-        if not (ci_inputs.is_schedule or ci_inputs.is_workflow_dispatch):
+        # Callers can explicitly opt a presubmit workflow into sanitizer tests.
+        if not ci_inputs.should_run_asan_tests:
             test_rocm = TestRocmDecision(
                 action=JobAction.SKIP,
                 test_type=test_type,
-                test_type_reason="ASAN tests skipped due to non-nightly trigger",
+                test_type_reason="ASAN tests not enabled for this trigger",
             )
 
     build_pytorch_action = JobAction.RUN if ci_inputs.build_pytorch else JobAction.SKIP
@@ -1025,11 +1033,10 @@ def _expand_build_config_for_platform(
 
         # TODO(#3433): Remove once ASAN tests pass and test_rocm.action is plumbed.
         if build_variant == "asan":
-            # Only run full ASAN tests on scheduled or workflow_dispatch runs
-            if not (ci_inputs.is_schedule or ci_inputs.is_workflow_dispatch):
+            if not ci_inputs.should_run_asan_tests:
                 test_runs_on = ""
                 print(
-                    f"  {family_name}: ASAN tests skipped for non-nightly trigger, "
+                    f"  {family_name}: ASAN tests not enabled for this trigger, "
                     f"disabling tests"
                 )
             elif "test-runs-on-sandbox" in platform_info:
@@ -1042,12 +1049,10 @@ def _expand_build_config_for_platform(
                     f"disabling tests"
                 )
         elif build_variant == "host-asan":
-            # Run host-asan tests only on nightly (schedule or workflow_dispatch)
-            # due to limited ASAN runner capacity and stability concerns.
-            if not (ci_inputs.is_schedule or ci_inputs.is_workflow_dispatch):
+            if not ci_inputs.should_run_asan_tests:
                 test_runs_on = ""
                 print(
-                    f"  {family_name}: host-asan tests only run on nightly, "
+                    f"  {family_name}: host-asan tests not enabled for this trigger, "
                     f"disabling tests"
                 )
             elif "test-runs-on-sandbox" in platform_info:
