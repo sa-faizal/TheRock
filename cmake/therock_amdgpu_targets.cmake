@@ -13,6 +13,26 @@
 # Note that each gfx_target will also create a family of the same name.
 set_property(GLOBAL PROPERTY THEROCK_AMDGPU_TARGETS)
 
+# Collapses exact targets whose LLVM feature sets are represented by a generic
+# processor into the corresponding generic code-object target. This operates
+# only on a subproject's compiler target list: callers must retain the exact
+# target list for runtime device matching, tuning databases, and distribution
+# metadata.
+function(therock_collapse_amdgpu_targets_to_generic out_var)
+  set(_collapsed_targets)
+  foreach(_target ${ARGN})
+    if("${_target}" MATCHES "^gfx103[0-6]$")
+      list(APPEND _collapsed_targets gfx10-3-generic)
+    elseif("${_target}" MATCHES "^gfx120[01]$")
+      list(APPEND _collapsed_targets gfx12-generic)
+    else()
+      list(APPEND _collapsed_targets "${_target}")
+    endif()
+  endforeach()
+  list(REMOVE_DUPLICATES _collapsed_targets)
+  set("${out_var}" "${_collapsed_targets}" PARENT_SCOPE)
+endfunction()
+
 # Declares an AMDGPU target, associating it with family names and optionally
 # setting additional characteristics.
 # Args: gfx_target product_name
@@ -130,8 +150,8 @@ therock_add_amdgpu_target(gfx1030 "AMD RX 6800 / XT" FAMILY dgpu-all gfx103X-all
   EXCLUDE_TARGET_PROJECTS
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
-    composable_kernel # https://github.com/ROCm/TheRock/issues/4836
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
 )
@@ -139,8 +159,8 @@ therock_add_amdgpu_target(gfx1031 "AMD RX 6700 / XT" FAMILY dgpu-all gfx103X-all
   EXCLUDE_TARGET_PROJECTS
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
-    composable_kernel # https://github.com/ROCm/TheRock/issues/4836
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
 )
@@ -148,8 +168,8 @@ therock_add_amdgpu_target(gfx1032 "AMD RX 6600" FAMILY dgpu-all gfx103X-all gfx1
   EXCLUDE_TARGET_PROJECTS
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
-    composable_kernel # https://github.com/ROCm/TheRock/issues/4836
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
 )
@@ -158,16 +178,16 @@ therock_add_amdgpu_target(gfx1033 "AMD Van Gogh iGPU" FAMILY igpu-all gfx103X-al
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
-    composable_kernel
 )
 therock_add_amdgpu_target(gfx1034 "AMD RX 6500 XT" FAMILY dgpu-all gfx103X-all gfx103X-dgpu
   EXCLUDE_TARGET_PROJECTS
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
-    composable_kernel # https://github.com/ROCm/TheRock/issues/4836
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
 )
@@ -175,8 +195,8 @@ therock_add_amdgpu_target(gfx1035 "AMD Radeon 680M Laptop iGPU" FAMILY igpu-all 
   EXCLUDE_TARGET_PROJECTS
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
-    composable_kernel # https://github.com/ROCm/TheRock/issues/4836
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
 )
@@ -184,8 +204,8 @@ therock_add_amdgpu_target(gfx1036 "AMD Raphael iGPU" FAMILY igpu-all gfx103X-all
   EXCLUDE_TARGET_PROJECTS
     hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
     hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
-    composable_kernel # https://github.com/ROCm/TheRock/issues/4836
     rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+    rocshmem # gfx10.3 is not supported
     hipTensor # https://github.com/ROCm/TheRock/issues/2074
     rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
 )

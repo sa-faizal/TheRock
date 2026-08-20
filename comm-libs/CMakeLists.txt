@@ -28,6 +28,7 @@ if(THEROCK_ENABLE_RCCL)
   set(_rccl_subproject_names)
 
   therock_cmake_subproject_declare(rccl
+    USE_GENERIC_GFX_TARGETS
     # Build all GPU targets in a single target-neutral artifact as long as the
     # host code isn't fully target agnostic.
     USE_TEST_AMDGPU_TARGETS
@@ -109,6 +110,7 @@ if(THEROCK_ENABLE_RCCL)
     endif()
 
     therock_cmake_subproject_declare(rccl-tests
+      USE_GENERIC_GFX_TARGETS
       USE_TEST_AMDGPU_TARGETS
       EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_SYSTEMS_SOURCE_DIR}/projects/rccl-tests"
       BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rccl-tests"
@@ -165,6 +167,7 @@ if(THEROCK_ENABLE_ROCSHMEM)
     endif()
   endif()
   therock_cmake_subproject_declare(rocshmem
+    USE_GENERIC_GFX_TARGETS
     # rocshmem uses .hip_fatbin/.hip_gpubin_* ELF sections for device code
     # instead of .hipFatBinSegment, making it incompatible with kpack injection.
     # Build all GPU targets in a single target-neutral artifact as a workaround.

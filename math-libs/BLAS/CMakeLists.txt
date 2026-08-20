@@ -281,6 +281,7 @@ if(THEROCK_ENABLE_SPARSE)
   set(_sparse_subproject_names)
 
   therock_cmake_subproject_declare(rocSPARSE
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocsparse"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocSPARSE"
     BACKGROUND_BUILD
@@ -318,6 +319,7 @@ if(THEROCK_ENABLE_SPARSE)
   ##############################################################################
 
   therock_cmake_subproject_declare(hipSPARSE
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hipsparse"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipSPARSE"
     BACKGROUND_BUILD
@@ -411,6 +413,7 @@ if(THEROCK_ENABLE_SOLVER)
   endif()
 
   therock_cmake_subproject_declare(rocSOLVER
+      USE_GENERIC_GFX_TARGETS
       EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocsolver"
       BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocSOLVER"
       BACKGROUND_BUILD
@@ -460,6 +463,7 @@ if(THEROCK_ENABLE_SOLVER)
   endif()
 
   therock_cmake_subproject_declare(hipSOLVER
+      USE_GENERIC_GFX_TARGETS
       EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hipsolver"
       BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipSOLVER"
       BACKGROUND_BUILD

@@ -241,6 +241,9 @@ endfunction()
 #   artifacts are marked TARGET_NEUTRAL so that the resulting _generic artifact
 #   contains device code for every architecture, making upload races in classic CI
 #   harmless. Does not affect dist_info.json (unlike USE_DIST_AMDGPU_TARGETS).
+# USE_GENERIC_GFX_TARGETS: Collapse exact gfx103x and gfx120x compiler targets
+#   to gfx10-3-generic and gfx12-generic, respectively. The exact target list is
+#   retained separately for runtime metadata and target-specific data files.
 # DISABLE_AMDGPU_TARGETS: Do not set any GPU_TARGETS or AMDGPU_TARGETS variables
 #   in the project. This is largely used for broken projects that cannot
 #   build with an explicit target list.
@@ -361,7 +364,7 @@ endfunction()
 function(therock_cmake_subproject_declare target_name)
   cmake_parse_arguments(
     PARSE_ARGV 1 ARG
-    "ACTIVATE;USE_DIST_AMDGPU_TARGETS;USE_TEST_AMDGPU_TARGETS;DISABLE_AMDGPU_TARGETS;EXCLUDE_FROM_ALL;BACKGROUND_BUILD;NO_MERGE_COMPILE_COMMANDS;OUTPUT_ON_FAILURE;NO_INSTALL_RPATH;FPRINT_SOURCE_HASH"
+    "ACTIVATE;USE_DIST_AMDGPU_TARGETS;USE_TEST_AMDGPU_TARGETS;USE_GENERIC_GFX_TARGETS;DISABLE_AMDGPU_TARGETS;EXCLUDE_FROM_ALL;BACKGROUND_BUILD;NO_MERGE_COMPILE_COMMANDS;OUTPUT_ON_FAILURE;NO_INSTALL_RPATH;FPRINT_SOURCE_HASH"
     "EXTERNAL_SOURCE_DIR;BINARY_DIR;DIR_PREFIX;INSTALL_DESTINATION;COMPILER_TOOLCHAIN;INTERFACE_PROGRAM_DIRS;CMAKE_LISTS_RELPATH;INTERFACE_PKG_CONFIG_DIRS;INSTALL_RPATH_EXECUTABLE_DIR;INSTALL_RPATH_LIBRARY_DIR;LOGICAL_TARGET_NAME;FPRINT_SOURCE_DIR"
     "BUILD_DEPS;RUNTIME_DEPS;CMAKE_ARGS;CMAKE_INCLUDES;INTERFACE_INCLUDE_DIRS;INTERFACE_LINK_DIRS;IGNORE_PACKAGES;EXTRA_DEPENDS;INSTALL_RPATH_DIRS;INTERFACE_INSTALL_RPATH_DIRS;DEFAULT_GPU_TARGETS;FPRINT_FILE_GLOBS;INSTALL_OPTIONAL_COMPONENTS"
   )
@@ -515,6 +518,7 @@ function(therock_cmake_subproject_declare target_name)
     THEROCK_SUBPROJECT cmake
     THEROCK_BUILD_POOL "${_build_pool}"
     THEROCK_AMDGPU_TARGETS "${_gpu_targets}"
+    THEROCK_USE_GENERIC_GFX_TARGETS "${ARG_USE_GENERIC_GFX_TARGETS}"
     THEROCK_DEFAULT_GPU_TARGETS "${ARG_DEFAULT_GPU_TARGETS}"
     THEROCK_DISABLE_AMDGPU_TARGETS "${ARG_DISABLE_AMDGPU_TARGETS}"
     THEROCK_EXCLUDE_FROM_ALL "${ARG_EXCLUDE_FROM_ALL}"
@@ -1709,10 +1713,24 @@ function(_therock_cmake_subproject_setup_toolchain
       endif()
     endif()
 
+    set(_compile_gpu_targets ${_filtered_gpu_targets})
+    get_target_property(_use_generic_gfx_targets "${target_name}" THEROCK_USE_GENERIC_GFX_TARGETS)
+    if(_use_generic_gfx_targets)
+      therock_collapse_amdgpu_targets_to_generic(
+        _compile_gpu_targets ${_filtered_gpu_targets})
+      if(NOT "${_compile_gpu_targets}" STREQUAL "${_filtered_gpu_targets}")
+        message(STATUS
+          "Collapsing AMDGPU compiler targets for ${target_name}: "
+          "${_filtered_gpu_targets} -> ${_compile_gpu_targets}")
+      endif()
+    endif()
+
     # TODO: AMDGPU_TARGETS is being deprecated. For now we set both.
-    string(APPEND _toolchain_contents "set(AMDGPU_TARGETS @_filtered_gpu_targets@ CACHE STRING \"From super-project\" FORCE)\n")
-    string(APPEND _toolchain_contents "set(GPU_TARGETS @_filtered_gpu_targets@ CACHE STRING \"From super-project\" FORCE)\n")
-    string(APPEND _toolchain_contents "set(CMAKE_HIP_ARCHITECTURES @_filtered_gpu_targets@ CACHE STRING \"From super-project\" FORCE)\n")
+    string(APPEND _toolchain_contents "set(THEROCK_AMDGPU_TARGETS_EXACT @_filtered_gpu_targets@ CACHE STRING \"Exact targets from super-project\" FORCE)\n")
+    string(APPEND _toolchain_contents "set(THEROCK_AMDGPU_COMPILE_TARGETS @_compile_gpu_targets@ CACHE STRING \"Compiler targets from super-project\" FORCE)\n")
+    string(APPEND _toolchain_contents "set(AMDGPU_TARGETS @_compile_gpu_targets@ CACHE STRING \"From super-project\" FORCE)\n")
+    string(APPEND _toolchain_contents "set(GPU_TARGETS @_compile_gpu_targets@ CACHE STRING \"From super-project\" FORCE)\n")
+    string(APPEND _toolchain_contents "set(CMAKE_HIP_ARCHITECTURES @_compile_gpu_targets@ CACHE STRING \"From super-project\" FORCE)\n")
   endif()
 
   # General settings applicable to all toolchains.

@@ -30,6 +30,7 @@ if(THEROCK_ENABLE_MIOPEN)
   endif()
 
   therock_cmake_subproject_declare(MIOpen
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/miopen"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/MIOpen"
     BACKGROUND_BUILD

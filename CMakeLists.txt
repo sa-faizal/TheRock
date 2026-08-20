@@ -538,6 +538,11 @@ endif()
 ################################################################################
 
 if(THEROCK_BUILD_TESTING)
+  add_test(
+    NAME therock-amdgpu-generic-target-collapse
+    COMMAND "${CMAKE_COMMAND}" -P
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/cmake/test_amdgpu_targets.cmake"
+  )
   if(NOT WIN32)
     add_executable(
       dlopen-hip

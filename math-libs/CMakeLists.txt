@@ -24,6 +24,7 @@ if(THEROCK_ENABLE_RAND)
   set(_rand_subproject_names)
 
   therock_cmake_subproject_declare(rocRAND
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocrand"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocRAND"
     BACKGROUND_BUILD
@@ -58,6 +59,7 @@ if(THEROCK_ENABLE_RAND)
   # Note: hipRAND has no benchmarks
 
   therock_cmake_subproject_declare(hipRAND
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hiprand"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipRAND"
     BACKGROUND_BUILD
@@ -106,6 +108,7 @@ if(THEROCK_ENABLE_PRIM)
   ##############################################################################
 
   therock_cmake_subproject_declare(rocPRIM
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocprim"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocPRIM"
     CMAKE_ARGS
@@ -136,6 +139,7 @@ if(THEROCK_ENABLE_PRIM)
     # that depend on rocPRIM.
     # Passing BACKGROUND_BUILD ensures that the tests aren't built (too) concurrently with other projects that are demanding.
     therock_cmake_subproject_declare(rocPRIM_tests
+      USE_GENERIC_GFX_TARGETS
       EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocprim"
       BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocPRIM_tests"
       BACKGROUND_BUILD
@@ -167,6 +171,7 @@ if(THEROCK_ENABLE_PRIM)
   endif()
 
   therock_cmake_subproject_declare(hipCUB
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hipcub"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipCUB"
     BACKGROUND_BUILD
@@ -196,6 +201,7 @@ if(THEROCK_ENABLE_PRIM)
   therock_cmake_subproject_activate(hipCUB)
 
   therock_cmake_subproject_declare(rocThrust
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocthrust"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocThrust"
     BACKGROUND_BUILD
@@ -263,6 +269,7 @@ if(THEROCK_ENABLE_FFT)
   set(_fft_subproject_names)
 
   therock_cmake_subproject_declare(rocFFT
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocfft"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocFFT"
     BACKGROUND_BUILD
@@ -300,6 +307,7 @@ if(THEROCK_ENABLE_FFT)
   ##############################################################################
 
   therock_cmake_subproject_declare(hipFFT
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hipfft"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipFFT"
     BACKGROUND_BUILD
@@ -388,6 +396,7 @@ if(THEROCK_ENABLE_ROCWMMA)
   endif()
 
   therock_cmake_subproject_declare(rocWMMA
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocwmma"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocWMMA"
     BACKGROUND_BUILD
@@ -436,6 +445,7 @@ if(THEROCK_ENABLE_ROCALUTION)
   ##############################################################################
 
   therock_cmake_subproject_declare(rocALUTION
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/rocalution"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/rocALUTION"
     BACKGROUND_BUILD
@@ -498,6 +508,7 @@ if(THEROCK_ENABLE_LIBHIPCXX)
   endif()
 
   therock_cmake_subproject_declare(libhipcxx
+    USE_GENERIC_GFX_TARGETS
     # TODO: use this in case libhipcx is moved to e.g. rocm-libraries
     #EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/libhipcxx"
     EXTERNAL_SOURCE_DIR "${THEROCK_SOURCE_DIR}/math-libs/libhipcxx"
@@ -580,6 +591,7 @@ if(_ck_enabled)
   ##############################################################################
 
   therock_cmake_subproject_declare(composable_kernel
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/composablekernel"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/composable_kernel"
     BACKGROUND_BUILD
@@ -627,6 +639,7 @@ if(THEROCK_ENABLE_HIPTENSOR AND _ck_enabled)
   ##############################################################################
 
   therock_cmake_subproject_declare(hipTensor
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hiptensor"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipTensor"
     BACKGROUND_BUILD
@@ -673,6 +686,7 @@ if(THEROCK_ENABLE_HIPTHREADS)
   ##############################################################################
 
   therock_cmake_subproject_declare(hipthreads
+    USE_GENERIC_GFX_TARGETS
     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_LIBRARIES_SOURCE_DIR}/projects/hipthreads"
     BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/hipthreads"
     BACKGROUND_BUILD
