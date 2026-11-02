@@ -1,0 +1,81 @@
+From 63b9c420c9c041575fddaef998236c77bee5a2b7 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.invalid>
+Date: Mon, 2 Nov 2026 14:19:51 -0800
+Subject: [PATCH] rocFFT: batch AOT cache writes
+
+Batch writes from one AOT helper invocation in a SQLite transaction, then commit before exporting the reproducible AOT cache. Runtime-cache behavior and SQLite policy remain unchanged.
+
+Upstream: https://github.com/sa-faizal/rocm-libraries/tree/rocfft-aot-batch
+---
+ projects/rocfft/library/src/include/rtc_cache.h  |  5 +++++
+ .../rocfft/library/src/rocfft_aot_helper.cpp     |  3 +++
+ projects/rocfft/library/src/rtc_cache.cpp        | 16 ++++++++++++++++
+ 3 files changed, 24 insertions(+)
+
+diff --git a/projects/rocfft/library/src/include/rtc_cache.h b/projects/rocfft/library/src/include/rtc_cache.h
+index 059f95b..6dc95de 100644
+--- a/projects/rocfft/library/src/include/rtc_cache.h
++++ b/projects/rocfft/library/src/include/rtc_cache.h
+@@ -104,6 +104,11 @@ struct RTCCache
+     // many compilations in parallel when building the library
+     void enable_write_mostly();
+ 
++    // Batch the writes produced by one AOT helper invocation. This is
++    // separate from the runtime cache path.
++    void begin_aot_cache_transaction();
++    void commit_aot_cache_transaction();
++
+     // write out kernels in the current cache to the output path.
+     // this copies the kernels in a consistent order and clears out
+     // the timestamp fields so that the resulting file is a
+diff --git a/projects/rocfft/library/src/rocfft_aot_helper.cpp b/projects/rocfft/library/src/rocfft_aot_helper.cpp
+index d324dd8..6977417 100644
+--- a/projects/rocfft/library/src/rocfft_aot_helper.cpp
++++ b/projects/rocfft/library/src/rocfft_aot_helper.cpp
+@@ -781,6 +781,7 @@ int main(int argc, char** argv)
+     RTCCache::single = std::make_unique<RTCCache>();
+ 
+     RTCCache::single->enable_write_mostly();
++    RTCCache::single->begin_aot_cache_transaction();
+ 
+     CompileQueue queue;
+ 
+@@ -832,6 +833,8 @@ int main(int argc, char** argv)
+     for(size_t i = 0; i < NUM_THREADS; ++i)
+         threads[i].join();
+ 
++    RTCCache::single->commit_aot_cache_transaction();
++
+     // write the output file using what we collected in the temporary
+     // cache
+     RTCCache::single->write_aot_cache(output_cache_file, generator_sum(), gpu_archs);
+diff --git a/projects/rocfft/library/src/rtc_cache.cpp b/projects/rocfft/library/src/rtc_cache.cpp
+index 2845840..27a745d 100644
+--- a/projects/rocfft/library/src/rtc_cache.cpp
++++ b/projects/rocfft/library/src/rtc_cache.cpp
+@@ -789,6 +789,22 @@ void RTCCache::enable_write_mostly()
+     sqlite3_step(wal_stmt.get());
+ }
+ 
++void RTCCache::begin_aot_cache_transaction()
++{
++    auto begin_stmt = prepare_stmt(db_user, "BEGIN IMMEDIATE");
++    if(sqlite3_step(begin_stmt.get()) != SQLITE_DONE)
++        throw std::runtime_error(std::string("begin_aot_cache_transaction: ")
++                                 + sqlite3_errmsg(db_user));
++}
++
++void RTCCache::commit_aot_cache_transaction()
++{
++    auto commit_stmt = prepare_stmt(db_user, "COMMIT");
++    if(sqlite3_step(commit_stmt.get()) != SQLITE_DONE)
++        throw std::runtime_error(std::string("commit_aot_cache_transaction: ")
++                                 + sqlite3_errmsg(db_user));
++}
++
+ void RTCCache::write_aot_cache(const std::string&              output_path,
+                                const std::array<char, 32>&     generator_sum,
+                                const std::vector<std::string>& gpu_archs)
+-- 
+2.53.0.windows.2
+
